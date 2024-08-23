@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <?!= include('css'); ?>  <!-- Incluye los estilos desde css.html -->
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
+  <base target="_top">
+</head>
+<body>
+  <div id="main-container">
+    <h2>Control de Asistencia</h2>
+
+    <div class="radio-buttons">
+      <label>
+        <input type="radio" name="registro" value="scan" onclick="mostrarEscanearQR()"> Scanear QR
+      </label>
+      <label>
+        <input type="radio" name="registro" value="manual" onclick="mostrarLoginForm()"> Ingresar Credenciales
+      </label>
+    </div>
+
+    <div id="loginForm" class="form-container" style="display: none;">
+      <div class="input-group">
+        <label for="usuario">
+          <i class="fa fa-user"></i>
+        </label>
+        <input type="text" id="usuario" name="usuario" placeholder="Usuario">
+      </div>
+      <div class="input-group">
+        <label for="password">
+          <i class="fa fa-lock"></i>
+        </label>
+        <input type="password" id="password" name="password" placeholder="Contraseña">
+      </div>
+      <button class="button" onclick="verificarUsuario()">Ingresar</button>
+      <div id="mensaje"></div>
+    </div>
+
+    <div id="qr-reader" style="display: none;"></div>
+    <div id="qr-reader-results"></div>
+
+<div id="adminDashboard" class="dashboard" style="display: none;">
+  <h2>Dashboard de Administrador</h2>
+  <p>Bienvenido, <span id="adminName"></span></p>
+
+  <!-- Contenedor de título y botones -->
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <h3 id="tituloFormulario">USUARIOS</h3>
+    <div>
+      <button class="button" onclick="guardarUsuario()">Guardar</button>
+      <button class="button-limpiar" onclick="cancelarFormulario()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Formulario para añadir usuario -->
+  <div id="formularioUsuario">
+    <input type="hidden" id="filaUsuario">
+    <div class="input-group">
+      <label for="nombre">Nombre Completo</label>
+      <input type="text" id="nombre" placeholder="Nombre Completo">
+    </div>
+    <div class="input-group">
+      <label for="usuarioForm">Usuario</label>
+      <input type="text" id="usuarioForm" placeholder="Usuario">
+    </div>
+    <div class="input-group">
+      <label for="contrasenaForm">Contraseña</label>
+      <input type="text" id="contrasenaForm" placeholder="Contraseña">
+    </div>
+    <div class="input-group">
+      <label for="area">Área</label>
+      <input type="text" id="area" placeholder="Área">
+    </div>
+    <div class="input-group">
+      <label for="cargo">Cargo</label>
+      <input type="text" id="cargo" placeholder="Cargo">
+    </div>
+    <div class="input-group">
+      <label for="rol">Rol</label>
+      <select id="rol">
+        <option value="Administrador">Administrador</option>
+        <option value="Usuario">Usuario</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="gestionUsuarios">
+    <h3>Gestión de Usuarios</h3>
+    <table id="tablaUsuarios">
+      <thead>
+        <tr>
+          <th>Nombre Completo</th>
+          <th>Usuario</th>
+          <th>Contraseña</th>
+          <th>Área</th>
+          <th>Cargo</th>
+          <th>Rol</th>
+          <th>Código QR</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+
+
+
+    <div id="userDashboard" class="dashboard" style="display: none;">
+      <h2>Dashboard de Usuario</h2>
+      <p>Bienvenido, <span id="userName"></span></p>
+      <button class="button" onclick="registrar('entrada')">Registrar Entrada</button>
+      <button class="button" onclick="registrar('salida')">Registrar Salida</button>
+    </div>
+  </div>
+
+  <?!= include('scripts'); ?>
+  <?!= include('QrReaderJS'); ?> 
+
+  <!-- Pop-up de Registro de Asistencia -->
+<div id="popupRegistro" class="swal2-container swal2-center swal2-backdrop-show" style="display: none;">
+  <div class="swal2-popup swal2-modal swal2-show">
+    <div class="swal2-header">
+      <h2 id="popupTitulo" class="swal2-title">Control de Asistencia</h2>
+      <button type="button" class="swal2-close" onclick="cerrarPopupRegistro()">×</button>
+    </div>
+    <div class="swal2-content">
+      <h3 id="nombreEmpleado" class="swal2-title"></h3>
+      <div class="swal2-html-container" style="display: flex; justify-content: space-between;">
+        <div>
+          <label for="fechaEntrada">Fecha de Entrada:</label>
+          <input type="text" id="fechaEntrada" disabled>
+        </div>
+        <div>
+          <label for="horaEntrada">Hora de Entrada:</label>
+          <input type="text" id="horaEntrada" disabled>
+        </div>
+      </div>
+      <div class="swal2-html-container" style="display: flex; justify-content: space-between; margin-top: 10px;">
+        <div>
+          <label for="fechaSalida">Fecha de Salida:</label>
+          <input type="text" id="fechaSalida" disabled>
+        </div>
+        <div>
+          <label for="horaSalida">Hora de Salida:</label>
+          <input type="text" id="horaSalida" disabled>
+        </div>
+      </div>
+    </div>
+    <div class="swal2-actions">
+      <button type="button" class="swal2-confirm swal2-styled" onclick="registrarAsistencia()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+
+</body>
+</html>

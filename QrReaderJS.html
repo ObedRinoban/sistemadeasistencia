@@ -1,0 +1,64 @@
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
+
+<script>
+  function docReady(fn) {
+    if (document.readyState === "complete" || document.readyState === "interactive") {
+      setTimeout(fn, 1);
+    } else {
+      document.addEventListener("DOMContentLoaded", fn);
+    }
+  }
+
+  docReady(function() {
+    var resultContainer = document.getElementById('qr-reader-results');
+    var lastResult, countResults = 0;
+
+    var qrboxSize;
+    if (window.innerWidth > 1024) {  // Laptop/Desktop
+        qrboxSize = 500;  // Tamaño mayor para pantallas más grandes
+    } else {  // Móvil/Tableta
+        qrboxSize = 350;  // Tamaño menor para pantallas pequeñas
+    }
+
+    var html5QrcodeScanner = new Html5QrcodeScanner(
+      "qr-reader", { 
+        fps: 10, 
+        qrbox: { width: qrboxSize, height: qrboxSize },  // Tamaño cuadrado del área de escaneo
+        aspectRatio: 1.0  // Mantener un aspecto cuadrado
+      }
+    );
+
+function onScanSuccess(decodedText, decodedResult) {
+  if (decodedText !== lastResult) {
+    ++countResults;
+    lastResult = decodedText;
+
+    // Mostrar temporalmente el contenido del QR en la interfaz
+    var resultContainer = document.getElementById('qr-reader-results');
+    resultContainer.innerHTML = `<p>QR leído: ${decodedText}</p>`;
+    
+    // Procesar el código QR escaneado
+    google.script.run.withSuccessHandler(function(result) {
+      if (result) {
+        // Mostrar mensaje de bienvenida
+        alert("Bienvenido " + result.nombre);
+        // Registrar asistencia
+        google.script.run.withSuccessHandler(function(mensaje) {
+          alert(mensaje);
+        }).registrarAsistenciaAutomatica(result.nombre);
+      } else {
+        alert("Código QR no reconocido");
+      }
+    }).verificarCredencialesPorQR(decodedText);
+  }
+}
+
+
+
+    function onScanError(qrCodeError) {
+      console.error(`QR Code Scan Error: ${qrCodeError}`);
+    }
+
+    html5QrcodeScanner.render(onScanSuccess, onScanError);
+  });
+</script>

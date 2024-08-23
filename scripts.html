@@ -1,0 +1,259 @@
+<script>
+  window.addEventListener("load", functionInit, true); 
+
+function mostrarEscanearQR() {
+  document.getElementById("loginForm").style.display = "none";
+  document.getElementById("qr-reader").style.display = "block";
+}
+
+function mostrarLoginForm() {
+  document.getElementById("loginForm").style.display = "block";
+  document.getElementById("qr-reader").style.display = "none";
+}
+
+function verificarUsuario() {
+  var usuario = document.getElementById("usuario").value;
+  var password = document.getElementById("password").value;
+
+  if (!usuario || !password) {
+    document.getElementById("mensaje").innerHTML = "Por favor, ingrese el usuario y la contraseña.";
+    return;
+  }
+
+  google.script.run.withSuccessHandler(function(result) {
+    if (result) {
+      document.getElementById("mensaje").innerHTML = "Bienvenido " + result.nombre;
+      
+      document.getElementById("loginForm").style.display = "none"; 
+      document.querySelector(".radio-buttons").style.display = "none"; // Ocultar las opciones
+
+      if (result.rol.toLowerCase() === "admin" || result.rol.toLowerCase() === "administrador") {
+        document.getElementById("adminName").innerText = result.nombre;
+        document.getElementById("adminDashboard").style.display = "block";
+        gestionarUsuarios();
+      } else {
+        document.getElementById("userName").innerText = result.nombre;
+        document.getElementById("userDashboard").style.display = "block";
+        
+        // Registrar la asistencia automáticamente
+        google.script.run.withSuccessHandler(function(mensaje) {
+          alert(mensaje);
+        }).registrarAsistenciaAutomatica(result.nombre);
+      }
+    } else {
+      document.getElementById("mensaje").innerHTML = "Usuario o contraseña incorrecta";
+    }
+  }).verificarCredenciales(usuario, password);
+}
+
+
+function gestionarUsuarios() {
+  // Mostrar la barra de progreso al inicio
+  Swal.fire({
+    title: 'Cargando usuarios...',
+    text: 'Por favor, espera mientras se cargan los usuarios.',
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading(); // Muestra el spinner de carga
+    }
+  });
+
+  google.script.run.withSuccessHandler(function(usuarios) {
+    var tbody = document.getElementById("tablaUsuarios").querySelector("tbody");
+    tbody.innerHTML = ""; // Limpiar la tabla antes de llenarla de nuevo
+
+    google.script.run.withSuccessHandler(function(qrData) {
+      usuarios.forEach(function(usuario, index) {
+        if (usuario.length > 0 && usuario[1]) {
+          var fila = "<tr>";
+          fila += "<td>" + (usuario[0] || "") + "</td>"; 
+          fila += "<td>" + (usuario[1] || "") + "</td>"; 
+          fila += "<td>" + (usuario[2] || "") + "</td>"; 
+          fila += "<td>" + (usuario[3] || "") + "</td>"; 
+          fila += "<td>" + (usuario[4] || "") + "</td>"; 
+          fila += "<td>" + (usuario[5] || "") + "</td>"; 
+
+          var qrMessage = "Sin QR";
+          if (qrData[usuario[1]]) {
+            qrMessage = "QR Generado";
+          }
+
+          fila += "<td>" + qrMessage + "</td>";
+
+          fila += `<td>
+                      <button class="button" onclick="editarUsuario(${index})">Editar</button>
+                      <button class="button-eliminar" onclick="eliminarUsuario(${index})">Eliminar</button>
+                  </td>`;
+          tbody.innerHTML += fila;
+        }
+      });
+
+      // Cerrar la barra de progreso al terminar la carga de usuarios
+      Swal.close();
+    }).obtenerQRs();
+
+  }).obtenerUsuarios();
+
+  document.getElementById("gestionUsuarios").style.display = "block";
+}
+
+
+
+function guardarUsuario() {
+  var fila = document.getElementById("filaUsuario").value;
+  var nombre = document.getElementById("nombre").value;
+  var usuario = document.getElementById("usuarioForm").value;
+  var contrasena = document.getElementById("contrasenaForm").value;
+  var area = document.getElementById("area").value;
+  var cargo = document.getElementById("cargo").value;
+  var rol = document.getElementById("rol").value;
+
+  if (fila === "") {
+    google.script.run.withSuccessHandler(function(mensaje) {
+      alert(mensaje);
+      gestionarUsuarios();
+      cancelarFormulario();
+    }).anadirUsuario(nombre, usuario, contrasena, area, cargo, rol);
+  } else {
+    google.script.run.withSuccessHandler(function(mensaje) {
+      alert(mensaje);
+      gestionarUsuarios();
+      cancelarFormulario();
+    }).editarUsuario(parseInt(fila), nombre, usuario, contrasena, area, cargo, rol);
+  }
+}
+
+function mostrarFormularioUsuario() {
+  var form = document.getElementById("formularioUsuario");
+  form.classList.remove('hidden'); // Asegúrate de eliminar la clase 'hidden'
+  form.classList.add('visible');   // Asegúrate de añadir la clase 'visible'
+  document.getElementById("tituloFormulario").innerText = "Añadir Usuario";
+}
+
+function editarUsuario(fila) {
+  // Mostrar la barra de progreso al inicio
+  Swal.fire({
+    title: 'Cargando datos del usuario...',
+    text: 'Por favor, espera mientras se cargan los datos.',
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading();
+    }
+  });
+
+  google.script.run.withSuccessHandler(function(usuarios) {
+    var usuario = usuarios[fila];
+    if (usuario) {
+      mostrarFormularioUsuario();
+      document.getElementById("tituloFormulario").innerText = "Editar Usuario";
+      document.getElementById("filaUsuario").value = fila;
+      document.getElementById("nombre").value = usuario[0];
+      document.getElementById("usuarioForm").value = usuario[1];
+      document.getElementById("contrasenaForm").value = usuario[2];
+      document.getElementById("area").value = usuario[3];
+      document.getElementById("cargo").value = usuario[4];
+      document.getElementById("rol").value = usuario[5];
+
+      // Cerrar la barra de progreso al terminar de cargar los datos del usuario
+      Swal.close();
+    } else {
+      console.error("Usuario no encontrado en la fila: " + fila);
+      Swal.close(); // Asegura que se cierra el popup incluso si hay un error
+    }
+  }).obtenerUsuarios();
+}
+
+
+function eliminarUsuario(fila) {
+  if (confirm("¿Está seguro que desea eliminar este usuario?")) {
+    google.script.run.withSuccessHandler(function(mensaje) {
+      alert(mensaje);
+      gestionarUsuarios();
+    }).eliminarUsuario(fila);
+  }
+}
+
+function cancelarFormulario() {
+  // Limpiar los campos del formulario
+  document.getElementById("filaUsuario").value = "";
+  document.getElementById("nombre").value = "";
+  document.getElementById("usuarioForm").value = "";
+  document.getElementById("contrasenaForm").value = "";
+  document.getElementById("area").value = "";
+  document.getElementById("cargo").value = "";
+  document.getElementById("rol").value = "Usuario"; // Selecciona el valor por defecto si es necesario
+  
+  // Resetear el título y el botón de Guardar
+  document.getElementById("tituloFormulario").innerText = "Añadir Usuario";
+  document.querySelector("#formularioUsuario .button:nth-child(6)").innerText = "Guardar";
+}
+
+
+function registrar(tipo) {
+  var dispositivo = "Laptop/Móvil";
+  google.script.run.withSuccessHandler(function(message) {
+    alert(message);
+  }).registrarAsistencia(document.getElementById("userName").innerText, tipo, dispositivo);
+}
+
+function limpiarFormulario() {
+  document.getElementById("filaUsuario").value = ""; // Limpiar la fila
+  document.getElementById("nombre").value = "";
+  document.getElementById("usuarioForm").value = "";
+  document.getElementById("contrasenaForm").value = "";
+  document.getElementById("area").value = "";
+  document.getElementById("cargo").value = "";
+  document.getElementById("rol").value = "Usuario"; // Valor predeterminado
+  document.getElementById("tituloFormulario").innerText = "Añadir Usuario";
+  document.querySelector("#formularioUsuario .button:nth-child(6)").innerText = "Guardar";
+}
+
+function mostrarBarraProgreso() {
+  return Swal.fire({
+    title: 'Cargando...',
+    html: '<div class="progress-bar"><div class="progress"></div></div>',
+    showConfirmButton: false,
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading();
+      const progressBar = Swal.getHtmlContainer().querySelector('.progress');
+      let width = 0;
+      const interval = setInterval(() => {
+        if (width >= 100) {
+          clearInterval(interval);
+        } else {
+          width++;
+          progressBar.style.width = width + '%';
+        }
+      }, 20);
+    }
+  });
+}
+
+function mostrarPopupRegistro(nombreEmpleado, fechaEntrada, horaEntrada, fechaSalida, horaSalida) {
+  document.getElementById("nombreEmpleado").innerText = nombreEmpleado || 'Sin Registro';
+  document.getElementById("fechaEntrada").value = fechaEntrada || 'Sin Registro...';
+  document.getElementById("horaEntrada").value = horaEntrada || 'Sin Registro...';
+  document.getElementById("fechaSalida").value = fechaSalida || 'Sin Registro...';
+  document.getElementById("horaSalida").value = horaSalida || 'Sin Registro...';
+  document.getElementById("popupRegistro").style.display = "block";
+}
+
+function cerrarPopupRegistro() {
+  document.getElementById("popupRegistro").style.display = "none";
+}
+
+function registrarAsistencia() {
+  google.script.run.withSuccessHandler(function(mensaje) {
+    Swal.fire('Registro completado', mensaje, 'success');
+    cerrarPopupRegistro();
+  }).registrarAsistencia(document.getElementById("nombreEmpleado").innerText);
+}
+
+
+function cerrarBarraProgreso() {
+  Swal.close();
+}
+
+
+</script>
